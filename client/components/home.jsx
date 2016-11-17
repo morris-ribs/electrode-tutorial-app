@@ -1,72 +1,72 @@
-import React, {PropTypes} from "react";
-import {connect} from "react-redux";
-import {toggleCheck, incNumber, decNumber} from "../actions";
+import React, { Component, PropTypes } from "react";
+import { Link } from "react-router";
 
-export const imageUrls = [
-  'http://daynin.github.io/clojurescript-presentation/img/react-logo.png',
-  'https://raw.githubusercontent.com/reactjs/redux/master/logo/logo.png',
-  'http://freevector.co/wp-content/uploads/2014/04/webpack.png',
-  'https://raw.github.com/hapijs/hapi/master/images/hapi.png',
-  'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/Emoji_u26a1.svg/2000px-Emoji_u26a1.svg.png'
-];
+export class Home extends Component {
 
-class Home extends React.Component {
-  renderImage(imageUrl, key) {
+  constructor(props) {
+    super(props);
+    this.state = {
+      ourFriends: [],
+      invitees: []
+    };
+    this.toggleGuest = this.toggleGuest.bind(this);
+  }
+
+  componentDidMount() {
+    fetch("/friends", {method: "GET"})
+    .then((res) => res.json())
+    .then((json) => {
+      const ourFriends = json.friends;
+      const invitees = ourFriends.map(({name}) => {
+        return { name, invited: false};
+      });
+      this.setState({ourFriends, invitees}); //eslint-disable-line
+    });
+  }
+
+  componentView({ location: { pathname } }) {
+    return {
+      intro: pathname === "/",
+      invite: pathname === "/invite"
+    };
+  }
+
+  toggleGuest({name, invited}) {
+    const invitees = this.state.invitees.map((invitee) => {
+      if (invitee.name === name) {
+        invitee.invited = !invited;
+      }
+      return invitee;
+    });
+    this.setState({invitees});
+  }
+
+  introMessage(className) {
     return (
-        <img key={key} src={imageUrl} width="10%" height="10%"/>
+      <div className={className}>
+        <p>We should have a house party and invite all of our friends!</p>
+        <Link to="/invite">Click Here to Make it a Party!</Link>
+      </div>
     );
   }
 
   render() {
-    const props = this.props;
-    const {checked, value} = props;
+    const { ourFriends, invitees } = this.state;
+    const toggleGuest = this.toggleGuest;
+    const view = this.componentView(this.props);
+    const message = this.introMessage;
+
     return (
       <div>
-        <h1>Hello <a href={"https://github.com/electrode-io"}>{"Electrode"}</a></h1>
-        <div> <p>Our beloved friends</p></div>
-        <div className="images">
-          {imageUrls.map((imageUrl, index) => this.renderImage(imageUrl, index))}
-        </div>
-        <div>
-          <h2>Managing States with Redux</h2>
-          <label>
-            <input onChange={props.onChangeCheck} type={"checkbox"} checked={checked}/>
-            Checkbox
-          </label>
-          <div>
-            <button type={"button"} onClick={props.onDecrease}>-</button>
-            &nbsp;{value}&nbsp;
-            <button type={"button"} onClick={props.onIncrease}>+</button>
-          </div>
-        </div>
+        {React.cloneElement(this.props.children, {
+          ourFriends, invitees, toggleGuest, view, message
+        })}
       </div>
     );
   }
 }
 
 Home.propTypes = {
-  checked: PropTypes.bool,
-  value: PropTypes.number.isRequired
+  children: PropTypes.node
 };
 
-const mapStateToProps = (state) => {
-  return {
-    checked: state.checkBox.checked, value: state.number.value
-  };
-};
-
-const mapDispatchToProps = (dispatch) => {
-  return {
-    onChangeCheck: () => {
-      dispatch(toggleCheck());
-    },
-    onIncrease: () => {
-      dispatch(incNumber());
-    },
-    onDecrease: () => {
-      dispatch(decNumber());
-    }
-  };
-};
-
-export default connect(mapStateToProps, mapDispatchToProps)(Home);
